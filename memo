@@ -52,3 +52,8 @@ sendMessage :: Object -> MethodName -> [ Object ] -> ObjectMonad [ Object ]
 getMethodName :: String -> ObjectMonad MethodName
 
 Method も Object のひとつにしてしまおう。
+
+2011.08.08 Mon.
+
+Android.hs について。
+exposeAction を IO () とするか X11IO () とするかで悩み中。

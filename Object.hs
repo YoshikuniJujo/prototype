@@ -9,6 +9,8 @@ module Object (
 	printVarName,
 	fromPrimitiveInt,
 	primitiveInt,
+	fromPrimitiveString,
+	primitiveString,
 	Method,
 	object,
 	runObject,
@@ -17,13 +19,21 @@ module Object (
 	setVar,
 	getVar,
 	mkMethod,
-	sendMsg
+	sendMsg,
+	setMethod
 ) where
 
 import "monads-tf" Control.Monad.State
 import "monads-tf" Control.Monad.Identity
 import Data.List
 import Data.Maybe
+
+setMethod :: Monad m => ObjectId -> String -> Method m -> ObjectMonad m VarName
+setMethod obj mn m = do
+	vn <- mkVarName mn
+	mt <- mkMethod m
+	setVar obj vn mt
+	return vn
 
 data Object m =
 	Object {
@@ -35,11 +45,15 @@ data Object m =
 
 data ObjectId =
 	ObjectId { objectIdInt :: Int	} |
-	PrimitiveInt { fromPrimitiveInt :: Int }
+	PrimitiveInt { fromPrimitiveInt :: Int } |
+	PrimitiveString { fromPrimitiveString :: String }
 	deriving ( Eq, Show )
 
 primitiveInt :: Int -> ObjectId
 primitiveInt = PrimitiveInt
+
+primitiveString :: String -> ObjectId
+primitiveString = PrimitiveString
 
 type Method m = ObjectId -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
 
