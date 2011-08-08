@@ -4,6 +4,7 @@ module Object (
 	ObjectMonad,
 	ObjectId,
 	VarName,
+	printVarName,
 	fromPrimitiveInt,
 	primitiveInt,
 	Method,
@@ -50,6 +51,9 @@ instance Show Object where
 	show ( Object id st )	= "Object " ++ show id ++ " " ++ show st
 data VarName = VarName String deriving ( Eq, Show )
 
+printVarName :: VarName -> IO ()
+printVarName ( VarName vn ) = putStrLn vn
+
 type ObjectMonad = State ObjectEnv
 
 type ObjectEnv = [ Object ]
@@ -57,8 +61,11 @@ type ObjectEnv = [ Object ]
 initObjectEnv :: ObjectEnv
 initObjectEnv = [ initObject ]
 
-runObject :: ObjectMonad a -> ( a, ObjectEnv )
-runObject = flip runState initObjectEnv
+debugObject :: ObjectMonad a -> ( a, ObjectEnv )
+debugObject = flip runState initObjectEnv
+
+runObject :: ObjectMonad a -> a
+runObject = flip evalState initObjectEnv
 
 getObject :: ObjectId -> ObjectMonad Object
 getObject obj = do
