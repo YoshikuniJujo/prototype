@@ -1,6 +1,8 @@
 {-# LANGUAGE PackageImports #-}
 
 module Object (
+	lift,
+	runIdentity,
 	ObjectMonad,
 	ObjectId,
 	VarName,
@@ -19,16 +21,17 @@ module Object (
 ) where
 
 import "monads-tf" Control.Monad.State
+import "monads-tf" Control.Monad.Identity
 import Data.List
 import Data.Maybe
 
-data Object =
+data Object m =
 	Object {
 		objectId	:: ObjectId,
 		objectStatus	:: [ ( VarName, ObjectId ) ] } |
 	Method {
 		objectId :: ObjectId,
-		method :: Method }
+		method :: Method m }
 
 data ObjectId =
 	ObjectId { objectIdInt :: Int	} |
@@ -38,15 +41,15 @@ data ObjectId =
 primitiveInt :: Int -> ObjectId
 primitiveInt = PrimitiveInt
 
-type Method = ObjectId -> [ ObjectId ] -> ObjectMonad [ ObjectId ]
+type Method m = ObjectId -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
 
 object :: ObjectId
 object = ObjectId 0
 
-initObject :: Object
+initObject :: Object m
 initObject = Object object [ ]
 
-instance Show Object where
+instance Show ( Object m ) where
 	show Method { }		= "method"
 	show ( Object id st )	= "Object " ++ show id ++ " " ++ show st
 data VarName = VarName String deriving ( Eq, Show )
@@ -54,58 +57,59 @@ data VarName = VarName String deriving ( Eq, Show )
 printVarName :: VarName -> IO ()
 printVarName ( VarName vn ) = putStrLn vn
 
-type ObjectMonad = State ObjectEnv
+type ObjectMonad m = StateT ( ObjectEnv m ) m
 
-type ObjectEnv = [ Object ]
+type ObjectEnv m = [ Object m ]
 
-initObjectEnv :: ObjectEnv
+initObjectEnv :: ObjectEnv m
 initObjectEnv = [ initObject ]
 
-debugObject :: ObjectMonad a -> ( a, ObjectEnv )
-debugObject = flip runState initObjectEnv
+debugObject :: ObjectMonad m a -> m ( a, ObjectEnv m )
+debugObject = flip runStateT initObjectEnv
 
-runObject :: ObjectMonad a -> a
-runObject = flip evalState initObjectEnv
+runObject :: Monad m => ObjectMonad m a -> m a
+runObject = flip evalStateT initObjectEnv
 
-getObject :: ObjectId -> ObjectMonad Object
+getObject :: Monad m => ObjectId -> ObjectMonad m ( Object m )
 getObject obj = do
 	gets ( head . filter ( ( == obj ) . objectId ) )
 
-putObject :: Object -> ObjectMonad ()
+putObject :: Monad m => Object m -> ObjectMonad m ()
 putObject = modify . ( : )
 
-getNewId :: ObjectMonad ObjectId
+getNewId :: Monad m => ObjectMonad m ObjectId
 getNewId = do
 	ids <- gets $ map ( objectIdInt . objectId )
 	return $ ObjectId $ head $ [ 1 .. ] \\ ids
 
-clone :: ObjectId -> ObjectMonad ObjectId
+clone :: Monad m => ObjectId -> ObjectMonad m ObjectId
 clone obj = do
-	st <- fmap objectStatus $ getObject obj
+	st <- getObject obj >>= return . objectStatus
 	newId <- getNewId
 	putObject $ Object newId st
 	return newId
 
-mkVarName :: String -> ObjectMonad VarName
+mkVarName :: Monad m => String -> ObjectMonad m VarName
 mkVarName = return . VarName
 
-setVar :: ObjectId -> VarName -> ObjectId -> ObjectMonad ()
+setVar :: Monad m => ObjectId -> VarName -> ObjectId -> ObjectMonad m ()
 setVar obj vn val = do
-	st <- fmap objectStatus $ getObject obj
+	st <- getObject obj >>= return . objectStatus
 	putObject $ Object obj $ ( vn, val ) : st
 
-getVar :: ObjectId -> VarName -> ObjectMonad ObjectId
+getVar :: Monad m => ObjectId -> VarName -> ObjectMonad m ObjectId
 getVar obj vn = do
-	st <- fmap objectStatus $ getObject obj
+	st <- getObject obj >>= return . objectStatus
 	return $ fromJust $ lookup vn st
 
-mkMethod :: Method -> ObjectMonad ObjectId
+mkMethod :: Monad m => Method m -> ObjectMonad m ObjectId
 mkMethod m = do
 	newId <- getNewId
 	putObject $ Method newId m
 	return newId
 
-sendMsg :: ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad [ ObjectId ]
+sendMsg :: Monad m =>
+	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
 sendMsg obj mn args = do
 	o@Object { objectStatus = vs } <- getObject obj
 	let	mt = fromJust $ lookup mn vs
