@@ -1,0 +1,54 @@
+2011.08.08 Mon.
+
+僕が Object 指向に求めるもの。toolkit を作るに当たって。
+1. 別モジュールで Widget を定義することができること
+2. 既存の Widget に機能を追加して新たな Widget が作れること
+3. 機能の追加は method 単位で行えること
+
+Object は 別の Object を State として持つことができる。
+Object は PrimitiveObject として Bool, Int, String 等をも含む。
+Object は Identity を持ち、State が変化しても自己同一性を保つ。
+Object は method を持つ。
+
+プロトタイプベースにすると物事が簡単になるだろう。
+オーバーライドもできるだろう。
+clone で新しいオブジェクトを作るやりかたにする。
+
+最初から存在するオブジェクトは空の object と各種の primitive object。
+primitive object は primitiveInt 3 等で入手できるものとする。
+で、それぞれのモジュールはプロトタイプとなる object を公開する。
+とりあえず、アクセス制限の機能は後回しにする。
+
+Ruby では変数呼び出しや代入も method として考えている。
+これはいいかもしれない。setx や getx で x にアクセスするようにする。
+となると、内部的な変数は method からのみアクセスできるようにしておけば良い。
+つまり、method は外から渡される [ Object ] だけでなく 内部的な [ Value ] をも
+引数として持つことになる。
+
+はじめは IO のからまないところからはじめよう。
+
+type ObjectMonad = State ObjectEnv
+
+とする。
+
+で、
+
+data Object = Object ObjectId [ Object ] [ Method ] |
+	PrimitiveInt Int | PrimitiveStr String | PrimitiveBool Bool
+
+data Method = Method MethodName
+	( [ Object ] -> [ Object ] -> ObjectMonad [ Object ] )
+
+object :: Object
+object = Object ObjectIdZero [ ] [ ]
+
+clone :: Object -> ObjectMonad Object
+clone ( Object _ mem met ) = return $ Object newId mem met
+
+setMethod :: Object -> Method -> ObjectMonad ()
+
+sendMessage :: Object -> MethodName -> [ Object ] -> ObjectMonad [ Object ]
+
+getMethodName :: String -> ObjectMonad MethodName
+
+Method も Object のひとつにしてしまおう。

@@ -4,21 +4,17 @@ import Object
 
 main :: IO ()
 main = do
-	putStrLn "yet"
-	print $ runIdentity testObject
+	print $ runObject testObject
 
-testObject :: Identity ( Int, ObjectEnv Identity )
-testObject = runObject $ do
-	tint <- getObjectType "int"
-	mint <- getMethodName "int"
-	setObjectMethod tint mint ( \_ _ -> return [ ] )
-	newObject tint -- [ ObjectValueInt 8 ]
-	return 123
+testObject :: ObjectMonad ObjectId
+testObject = do
+	i <- clone object
+	setx <- getMethodName "setx"
+--	add3 <- getMethodName "add3"
+	setMethod i setx ( Method mSetx )
+	sendMessage i setx [ primitiveInt 8 ]
+	return i
 
-{-
-initInt :: ObjectMethod Identity
-initInt this [ v ] = do
-	num <- getObjectValueName "num"
-	setObjectValue this num v
+mSetx :: ObjectId -> [ Object ] -> ObjectMonad [ Object ]
+mSetx obj args = do
 	return [ ]
--}
