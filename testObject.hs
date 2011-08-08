@@ -1,20 +1,11 @@
 module Main where
 
 import Object
+import Adder
 
 main :: IO ()
-main = do
-	print $ runObject testObject
-
-testObject :: ObjectMonad ObjectId
-testObject = do
-	i <- clone object
-	setx <- getMethodName "setx"
---	add3 <- getMethodName "add3"
-	setMethod i setx ( Method mSetx )
-	sendMessage i setx [ primitiveInt 8 ]
-	return i
-
-mSetx :: ObjectId -> [ Object ] -> ObjectMonad [ Object ]
-mSetx obj args = do
-	return [ ]
+main = print $ runObject $ do
+	( adder, setx, addx, getx ) <- makeAdder
+	sendMsg adder setx [ primitiveInt 3 ]
+	sendMsg adder addx [ primitiveInt 8 ]
+	sendMsg adder getx [ ]

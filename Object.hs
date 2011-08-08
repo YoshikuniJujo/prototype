@@ -1,91 +1,106 @@
 {-# LANGUAGE PackageImports #-}
 
 module Object (
-	Object,
-	ObjectId,
-	object,
-	primitiveInt,
-	Method( Method ),
 	ObjectMonad,
+	ObjectId,
+	VarName,
+	fromPrimitiveInt,
+	primitiveInt,
+	Method,
+	object,
 	runObject,
 	clone,
-	getMethodName,
-	setMethod,
-	sendMessage
+	mkVarName,
+	setVar,
+	getVar,
+	mkMethod,
+	sendMsg
 ) where
 
 import "monads-tf" Control.Monad.State
 import Data.List
 import Data.Maybe
 
-data Object = Object {
-	objectId	:: ObjectId,
-	objectStatus	:: [ Object ],
-	objectMethods	:: [ ( MethodName, Method ) ]
- } | PrimitiveInt Int
-	deriving Show
+data Object =
+	Object {
+		objectId	:: ObjectId,
+		objectStatus	:: [ ( VarName, ObjectId ) ] } |
+	Method {
+		objectId :: ObjectId,
+		method :: Method }
 
-data ObjectId = ObjectId { objectIdInt :: Int } deriving ( Eq, Show )
+data ObjectId =
+	ObjectId { objectIdInt :: Int	} |
+	PrimitiveInt { fromPrimitiveInt :: Int }
+	deriving ( Eq, Show )
 
-object :: Object
-object = Object ( ObjectId 0 ) [ ] [ ]
-
-primitiveInt :: Int -> Object
+primitiveInt :: Int -> ObjectId
 primitiveInt = PrimitiveInt
+
+type Method = ObjectId -> [ ObjectId ] -> ObjectMonad [ ObjectId ]
+
+object :: ObjectId
+object = ObjectId 0
+
+initObject :: Object
+initObject = Object object [ ]
+
+instance Show Object where
+	show Method { }		= "method"
+	show ( Object id st )	= "Object " ++ show id ++ " " ++ show st
+data VarName = VarName String deriving ( Eq, Show )
 
 type ObjectMonad = State ObjectEnv
 
-data ObjectEnv = ObjectEnv { envObjects :: [ Object ] } deriving Show
+type ObjectEnv = [ Object ]
 
 initObjectEnv :: ObjectEnv
-initObjectEnv = ObjectEnv [ object ]
+initObjectEnv = [ initObject ]
 
-getNewId :: ObjectMonad ObjectId
-getNewId = do
-	ids <- gets ( map ( objectIdInt . objectId ) . envObjects )
-	return $ ObjectId $ head $ [ 1 .. ] \\ ids
-
-putNewObject :: Object -> ObjectMonad ()
-putNewObject obj = do
-	oe@ObjectEnv { envObjects = objs } <- get
-	put $ oe { envObjects = obj : objs }
+runObject :: ObjectMonad a -> ( a, ObjectEnv )
+runObject = flip runState initObjectEnv
 
 getObject :: ObjectId -> ObjectMonad Object
 getObject obj = do
-	objs <- gets envObjects
-	return $ head $ filter ( ( == obj ) . objectId ) objs
+	gets ( head . filter ( ( == obj ) . objectId ) )
 
 putObject :: Object -> ObjectMonad ()
-putObject obj = do
-	oe@ObjectEnv { envObjects = objs } <- get
-	put oe { envObjects = obj : objs }
+putObject = modify . ( : )
 
-data MethodName = MethodName String deriving ( Eq, Show )
+getNewId :: ObjectMonad ObjectId
+getNewId = do
+	ids <- gets $ map ( objectIdInt . objectId )
+	return $ ObjectId $ head $ [ 1 .. ] \\ ids
 
-data Method = Method ( ObjectId -> [ Object ] -> ObjectMonad [ Object ] )
-
-instance Show Method where
-	show _ = "method"
-
-runObject :: ObjectMonad a -> (a, ObjectEnv )
-runObject = flip runState initObjectEnv
-
-clone :: Object -> ObjectMonad ObjectId
-clone ( Object _ st mt ) = do
+clone :: ObjectId -> ObjectMonad ObjectId
+clone obj = do
+	st <- fmap objectStatus $ getObject obj
 	newId <- getNewId
-	putNewObject $ Object newId st mt
+	putObject $ Object newId st
 	return newId
 
-getMethodName :: String -> ObjectMonad MethodName
-getMethodName = return . MethodName
+mkVarName :: String -> ObjectMonad VarName
+mkVarName = return . VarName
 
-setMethod :: ObjectId -> MethodName -> Method -> ObjectMonad ()
-setMethod obj mn m = do
-	obj@Object { objectMethods = mts } <- getObject obj
-	putObject $ obj { objectMethods = ( mn, m ) : mts }
+setVar :: ObjectId -> VarName -> ObjectId -> ObjectMonad ()
+setVar obj vn val = do
+	st <- fmap objectStatus $ getObject obj
+	putObject $ Object obj $ ( vn, val ) : st
 
-sendMessage :: ObjectId -> MethodName -> [ Object ] -> ObjectMonad [ Object ]
-sendMessage obj mn args = do
-	o@Object { objectMethods = ms } <- getObject obj
-	let Method m = fromJust $ lookup mn ms
+getVar :: ObjectId -> VarName -> ObjectMonad ObjectId
+getVar obj vn = do
+	st <- fmap objectStatus $ getObject obj
+	return $ fromJust $ lookup vn st
+
+mkMethod :: Method -> ObjectMonad ObjectId
+mkMethod m = do
+	newId <- getNewId
+	putObject $ Method newId m
+	return newId
+
+sendMsg :: ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad [ ObjectId ]
+sendMsg obj mn args = do
+	o@Object { objectStatus = vs } <- getObject obj
+	let	mt = fromJust $ lookup mn vs
+	Method _ m <- getObject mt
 	m obj args
