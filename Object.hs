@@ -14,6 +14,7 @@ module Object (
 	Method,
 	object,
 	runObject,
+	initObjectEnv,
 	clone,
 	mkVarName,
 	setVar,
@@ -81,12 +82,18 @@ initObjectEnv = [ initObject ]
 debugObject :: ObjectMonad m a -> m ( a, ObjectEnv m )
 debugObject = flip runStateT initObjectEnv
 
-runObject :: Monad m => ObjectMonad m a -> m a
-runObject = flip evalStateT initObjectEnv
+runObject :: Monad m => ObjectMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
+runObject = runStateT
 
 getObject :: Monad m => ObjectId -> ObjectMonad m ( Object m )
 getObject obj = do
-	gets ( head . filter ( ( == obj ) . objectId ) )
+	ret <- gets ( hd . filter ( ( == obj ) . objectId ) )
+	case ret of
+		Nothing -> get >>= error . show
+		Just ret -> return ret
+	where
+	hd [ ] = Nothing
+	hd xs = Just $ head xs
 
 putObject :: Monad m => Object m -> ObjectMonad m ()
 putObject = modify . ( : )
