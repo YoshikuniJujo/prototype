@@ -1,0 +1,21 @@
+build-type:	Simple
+cabal-version:	>= 1.2
+
+name:		prototype
+version:	0.1
+stability:	experimental
+author:		Yoshikuni Jujo <PAF01143@nifty.ne.jp>
+maintainer:	Yoshikuni Jujo <PAF01143@nifty.ne.jp>
+
+license:	BSD3
+license-file:	LICENSE
+
+category:	Development
+synopsis:	prototype-based programming on Haskell
+description:	prototype-based programming on Haskell
+
+library
+  hs-source-dirs:	src
+  exposed-modules:	Prototype
+  build-depends:	base > 3 && < 5, monads-tf
+  ghc-options:		-Wall

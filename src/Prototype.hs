@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 
-module Object (
+module Prototype (
 	lift,
 	runIdentity,
 	ObjectMonad,
