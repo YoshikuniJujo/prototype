@@ -63,3 +63,8 @@ exposeAction を IO () とするか X11IO () とするかで悩み中。
 だいぶいい感じのものができたので、独立した project にしても良いと思う。
 型名や関数名の見直しをして、ある程度整えたら Hackage に update しようかな。
 package 名は prototype あたりが良いと思う。
+
+sendMsg をどうするか。
+Structure and Interpretation of Computer Programs を参考にするのも一案。
+getMethod としても良いが、もっと object-oriented 色を出したい。
+send だと他とかぶりすぎる気がする。msg がいい気もするがどうか。

@@ -1,33 +1,55 @@
 {-# LANGUAGE PackageImports #-}
 
 module Control.Prototype (
-	lift,
-	runIdentity,
-	ObjectMonad,
-	ObjectId,
+	PrototypeMonad,
+	Object,
 	VarName,
-	printVarName,
+	Method,
+
+	runPrototype,
+	initPrototypeEnv,
+	object,
+	clone,
+	makeVarName,
+	setVar,
+	getVar,
+	getMethod,
+	sendMsg,
+	setMethod,
+
+	liftPT,
 	fromPrimitiveInt,
 	primitiveInt,
 	fromPrimitiveString,
 	primitiveString,
-	Method,
-	object,
-	runObject,
-	initObjectEnv,
-	clone,
-	mkVarName,
-	setVar,
-	getVar,
-	mkMethod,
-	sendMsg,
-	setMethod
+
+	printVarName,
 ) where
 
 import "monads-tf" Control.Monad.State
-import "monads-tf" Control.Monad.Identity
 import Data.List
 import Data.Maybe
+
+runPrototype :: Monad m =>
+	PrototypeMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
+runPrototype = runObject
+
+initPrototypeEnv :: ObjectEnv m
+initPrototypeEnv = initObjectEnv
+
+type PrototypeMonad m = ObjectMonad m
+
+type Object = ObjectId
+
+liftPT :: Monad m => m a -> ObjectMonad m a
+liftPT = lift
+
+makeVarName :: Monad m => String -> ObjectMonad m VarName
+makeVarName = mkVarName
+
+getMethod :: Monad m =>
+	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
+getMethod = sendMsg
 
 setMethod :: Monad m => ObjectId -> String -> Method m -> ObjectMonad m VarName
 setMethod obj mn m = do
@@ -36,7 +58,7 @@ setMethod obj mn m = do
 	setVar obj vn mt
 	return vn
 
-data Object m =
+data ObjectBody m =
 	Object {
 		objectId	:: ObjectId,
 		objectStatus	:: [ ( VarName, ObjectId ) ] } |
@@ -61,10 +83,10 @@ type Method m = ObjectId -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
 object :: ObjectId
 object = ObjectId 0
 
-initObject :: Object m
+initObject :: ObjectBody m
 initObject = Object object [ ]
 
-instance Show ( Object m ) where
+instance Show ( ObjectBody m ) where
 	show Method { }		= "method"
 	show ( Object oid st )	= "Object " ++ show oid ++ " " ++ show st
 data VarName = VarName String deriving ( Eq, Show )
@@ -74,7 +96,7 @@ printVarName ( VarName vn ) = putStrLn vn
 
 type ObjectMonad m = StateT ( ObjectEnv m ) m
 
-type ObjectEnv m = [ Object m ]
+type ObjectEnv m = [ ObjectBody m ]
 
 initObjectEnv :: ObjectEnv m
 initObjectEnv = [ initObject ]
@@ -82,7 +104,7 @@ initObjectEnv = [ initObject ]
 runObject :: Monad m => ObjectMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
 runObject = runStateT
 
-getObject :: Monad m => ObjectId -> ObjectMonad m ( Object m )
+getObject :: Monad m => ObjectId -> ObjectMonad m ( ObjectBody m )
 getObject obj = do
 	ret <- gets ( hd . filter ( ( == obj ) . objectId ) )
 	case ret of
@@ -92,7 +114,7 @@ getObject obj = do
 	hd [ ] = Nothing
 	hd xs = Just $ head xs
 
-putObject :: Monad m => Object m -> ObjectMonad m ()
+putObject :: Monad m => ObjectBody m -> ObjectMonad m ()
 putObject = modify . ( : )
 
 getNewId :: Monad m => ObjectMonad m ObjectId
