@@ -23,29 +23,32 @@ data X11Env = X11Env {
 	display		:: Display,
 	window		:: Window,
 	delWin		:: Atom,
-	exposeAction	:: X11IO ()
+	exposeAction	:: ObjectMonad X11IO ()
  }
 
 runAndroid :: ObjectMonad X11IO a -> IO ()
 runAndroid act = withWindow $ \dpy win dWin -> do
 	let initX11Env = X11Env dpy win dWin $ return ()
-	flip evalStateT initX11Env $ do
---	( _, X11Env _ _ _ exAct ) <- flip runStateT initX11Env $ runObject act
-		runObject act
-		exAct <- gets exposeAction
-		x11Env <- get
-		doWhile_ $ lift $ allocaXEvent $ \e -> flip evalStateT x11Env $ do
-			lift $ nextEvent dpy e
-			ev <- lift $ getEvent e
+	flip evalStateT initX11Env $ runObject $ do
+		act
+		exAct <- lift $ gets exposeAction
+		x11Env <- lift get
+		doWhile_ $ liftIO $ allocaXEvent $ \e -> flip evalStateT x11Env $
+			runObject $ do
+			liftIO $ nextEvent dpy e
+			ev <- liftIO $ getEvent e
 			case ev of
 				ClientMessageEvent { } ->
 					return $ getClientMessageAtom ev /= dWin
 				ExposeEvent { } -> exAct >> return True
 				KeyEvent { } -> do
 					let kc = ev_keycode ev
-					ks <- lift $ keycodeToKeysym dpy kc 0
+					ks <- liftIO $ keycodeToKeysym dpy kc 0
 					let ch = chr $ fromEnum ks
 					return $ ch /= 'q'
+				ButtonEvent { } -> do
+					liftIO $ print ev
+					return True
 				_ -> return True
 
 importAndroid :: ObjectMonad X11IO ( ObjectId, VarName, VarName )
@@ -66,7 +69,6 @@ setContentViewFun obj [ ] = do
 	X11Env dpy win dWin _ <- lift get
 	text <- mkVarName "text"
 	txt <- getVar obj text
-	liftIO $ drawStringUtf8 dpy win 12 12 30 $ fromPrimitiveString txt
 	lift $ put $ X11Env dpy win dWin $ liftIO $
 		drawStringUtf8 dpy win 12 12 30 $ fromPrimitiveString txt
 	return [ ]
