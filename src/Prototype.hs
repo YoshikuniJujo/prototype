@@ -42,7 +42,7 @@ data Object m =
 		objectStatus	:: [ ( VarName, ObjectId ) ] } |
 	Method {
 		objectId :: ObjectId,
-		method :: Method m }
+		_method :: Method m }
 
 data ObjectId =
 	ObjectId { objectIdInt :: Int	} |
@@ -66,7 +66,7 @@ initObject = Object object [ ]
 
 instance Show ( Object m ) where
 	show Method { }		= "method"
-	show ( Object id st )	= "Object " ++ show id ++ " " ++ show st
+	show ( Object oid st )	= "Object " ++ show oid ++ " " ++ show st
 data VarName = VarName String deriving ( Eq, Show )
 
 printVarName :: VarName -> IO ()
@@ -79,9 +79,6 @@ type ObjectEnv m = [ Object m ]
 initObjectEnv :: ObjectEnv m
 initObjectEnv = [ initObject ]
 
-debugObject :: ObjectMonad m a -> m ( a, ObjectEnv m )
-debugObject = flip runStateT initObjectEnv
-
 runObject :: Monad m => ObjectMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
 runObject = runStateT
 
@@ -90,7 +87,7 @@ getObject obj = do
 	ret <- gets ( hd . filter ( ( == obj ) . objectId ) )
 	case ret of
 		Nothing -> get >>= error . show
-		Just ret -> return ret
+		Just x -> return x
 	where
 	hd [ ] = Nothing
 	hd xs = Just $ head xs
@@ -132,7 +129,7 @@ mkMethod m = do
 sendMsg :: Monad m =>
 	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
 sendMsg obj mn args = do
-	o@Object { objectStatus = vs } <- getObject obj
+	Object { objectStatus = vs } <- getObject obj
 	let	mt = fromJust $ lookup mn vs
 	Method _ m <- getObject mt
 	m obj args
