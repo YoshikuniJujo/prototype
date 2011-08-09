@@ -16,6 +16,6 @@ description:	prototype-based programming on Haskell
 
 library
   hs-source-dirs:	src
-  exposed-modules:	Prototype
+  exposed-modules:	Control.Prototype
   build-depends:	base > 3 && < 5, monads-tf
   ghc-options:		-Wall

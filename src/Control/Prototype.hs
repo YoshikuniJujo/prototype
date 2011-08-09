@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 
-module Prototype (
+module Control.Prototype (
 	lift,
 	runIdentity,
 	ObjectMonad,
