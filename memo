@@ -57,3 +57,9 @@ Method も Object のひとつにしてしまおう。
 
 Android.hs について。
 exposeAction を IO () とするか X11IO () とするかで悩み中。
+
+2011.08.09 Tue.
+
+だいぶいい感じのものができたので、独立した project にしても良いと思う。
+型名や関数名の見直しをして、ある程度整えたら Hackage に update しようかな。
+package 名は prototype あたりが良いと思う。
