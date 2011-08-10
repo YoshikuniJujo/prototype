@@ -34,6 +34,7 @@ description:	prototype-based programming on Haskell
 		>	sit <- setMethod dog "sit" $ \this _ -> do
 		>		n <- member this name
 		>		liftPT $ putStrLn $ fromPrimStr n ++ " sitting."
+		>		return [ ]
 		>	myDog <- clone dog
 		>	method myDog setName [ primStr "John" ]
 		>	method myDog sit [ ]
