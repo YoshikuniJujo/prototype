@@ -31,8 +31,11 @@ import "monads-tf" Control.Monad.State (
 import Data.List ( (\\) )
 import Data.Maybe ( fromMaybe, listToMaybe )
 
-head :: [ a ] -> Maybe a
-head = listToMaybe
+head :: a -> [ a ] -> a
+head x = fromMaybe x . listToMaybe
+
+mmap :: Monad m => ( a -> b ) -> m a -> m b
+mmap f mx = mx >>= return . f
 
 --------------------------------------------------------------------------------
 
@@ -81,49 +84,46 @@ instance Show ( ObjectBody m ) where
 
 --------------------------------------------------------------------------------
 
+getNewId :: Monad m => PTMonad m Object
+getNewId = gets $
+	ObjectId . head err . ( [ 1 .. ] \\ ) .	map ( fromObjId . objectId )
+	where
+	err = error "too many objects"
+
 getObject :: Monad m => Object -> PTMonad m ( ObjectBody m )
-getObject obj =
-	gets ( fromMaybe err . head . filter ( ( == obj ) . objectId ) )
+getObject obj =	gets $ head err . filter ( ( == obj ) . objectId )
 	where
 	err = error $ "no such object: " ++ show obj
 
 putObject :: Monad m => ObjectBody m -> PTMonad m ()
 putObject = modify . ( : )
 
-getNewId :: Monad m => PTMonad m Object
-getNewId = do
-	ids <- gets $ map ( fromObjId . objectId )
-	return $ ObjectId $ fromMaybe err $ head $ [ 1 .. ] \\ ids
-	where
-	err = error "too many objects"
-
 clone :: Monad m => Object -> PTMonad m Object
 clone obj = do
-	mems <- getObject obj >>= return . objectMembers
 	newId <- getNewId
-	putObject $ ObjectBody newId mems
+	objBody <- getObject obj
+	putObject $ objBody { objectId = newId }
 	return newId
 
 makeMember :: Monad m => String -> PTMonad m Member
 makeMember = return . Member
 
 member :: Monad m => Object -> Member -> PTMonad m Object
-member obj mn = do
-	ObjectBody { objectMembers = mems } <- getObject obj
-	return $ fromMaybe err $ lookup mn mems
+member obj mem =
+	mmap ( fromMaybe err . lookup mem . objectMembers ) $ getObject obj
 	where
-	err = error $ "No such member: " ++ show mn ++ "\nobject: " ++ show obj
+	err = error $ "No such member: " ++ show mem ++ "\nobject: " ++ show obj
+
+method :: Monad m => Object -> Member -> [ Object ] -> PTMonad m [ Object ]
+method obj mem args =
+	member obj mem >>= getObject >>= ( $ args ) . ( $ obj ) . objectMethod
 
 setMember :: Monad m => Object -> Member -> Object -> PTMonad m ()
 setMember obj mn val = do
 	ObjectBody { objectMembers = mems } <- getObject obj
-	putObject $ ObjectBody obj $ ( mn, val ) : mems
-
-method :: Monad m => Object -> Member -> [ Object ] -> PTMonad m [ Object ]
-method obj mn args = do
-	mid <- member obj mn
-	Method { objectMethod = m } <- getObject mid
-	m obj args
+	putObject ObjectBody {
+		objectId = obj,
+		objectMembers = ( mn, val ) : mems }
 
 setMethod :: Monad m => Object -> String -> Method m -> PTMonad m Member
 setMethod obj name m = do
