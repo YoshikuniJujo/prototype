@@ -23,12 +23,12 @@ makeAddSub :: Monad m =>
 makeAddSub = do
 	( adder, setx, addx, getx ) <- makeAdder
 	suber <- clone adder
-{-
 	subx <- makeMember "subx"
+{-
 	mtSubx <- mkMethod mSubx
 	setMember suber subx mtSubx
 -}
-	subx <- setMethod suber "subx" mSubx
+	setMethod suber subx mSubx
 	return ( suber, setx, getx, addx, subx )
 
 mSubx :: Monad m => Method m

@@ -8,18 +8,18 @@ import Data.Function
 makeAdder :: Monad m => PTMonad m ( Object, Member, Member, Member )
 makeAdder = do
 	i <- clone object
+	setx <- makeMember "setx"
+	getx <- makeMember "getx"
+	addx <- makeMember "addx"
 {-
-	vnSetx <- makeMember "setx"
-	vnGetx <- makeMember "getx"
-	vnAddx <- makeMember "addx"
 	setMember i vnSetx mtSetx
 	setMember i vnGetx mtGetx
 	setMember i vnAddx mtAddx
 -}
-	vnSetx <- setMethod i "setx" mSetx -- mkMethod mSetx
-	vnGetx <- setMethod i "getx" mGetx -- mkMethod mGetx
-	vnAddx <- setMethod i "addx" mAddx -- mkMethod mAddx
-	return ( i, vnSetx, vnAddx, vnGetx )
+	setMethod i setx mSetx -- mkMethod mSetx
+	setMethod i getx mGetx -- mkMethod mGetx
+	setMethod i addx mAddx -- mkMethod mAddx
+	return ( i, setx, addx, getx )
 
 mSetx :: Monad m => Method m
 mSetx obj [ x ] = do

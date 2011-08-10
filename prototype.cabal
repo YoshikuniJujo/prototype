@@ -27,11 +27,13 @@ description:	prototype-based programming on Haskell
 		> main :: IO ()
 		> main = fmap fst $ flip runPT initPTEnv $ do
 		>	dog <- clone object
-		>	name <- makeMember "name"
-		>	setName <- setMethod dog "setName" $ \this [ n ] -> do
+		>	name	<- makeMember "name"
+		>	setName	<- makeMember "setName"
+		>	sit	<- makeMember "sit"
+		>	setMethod dog setName $ \this [ n ] -> do
 		>		setMember this name n
 		>		return [ ]
-		>	sit <- setMethod dog "sit" $ \this _ -> do
+		>	setMethod dog sit $ \this _ -> do
 		>		n <- member this name
 		>		liftPT $ putStrLn $ fromPrimStr n ++ " sitting."
 		>		return [ ]

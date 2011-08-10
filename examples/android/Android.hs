@@ -54,8 +54,10 @@ runAndroid act = withWindow $ \dpy win dWin -> do
 importAndroid :: PTMonad X11IO ( Object, Member, Member )
 importAndroid = do
 	textWidget	<- clone object
-	setText		<- setMethod textWidget "setText" setTextFun
-	setContentView	<- setMethod textWidget "setContentView" setContentViewFun
+	setText		<- makeMember "setText"
+	setContentView	<- makeMember "setContentView"
+	setMethod textWidget setText setTextFun
+	setMethod textWidget setContentView setContentViewFun
 	return ( textWidget, setText, setContentView )
 
 setTextFun :: Method X11IO
