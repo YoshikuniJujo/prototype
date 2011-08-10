@@ -25,10 +25,14 @@ module Control.Prototype (
 	printMemberName,
 ) where
 
+import Prelude hiding ( head )
 import "monads-tf" Control.Monad.State (
-	StateT, runStateT, lift, MonadIO, liftIO, modify, get, gets )
+	StateT, runStateT, lift, MonadIO, liftIO, modify, gets )
 import Data.List ( (\\) )
-import Data.Maybe ( fromJust )
+import Data.Maybe ( fromMaybe, listToMaybe )
+
+head :: [ a ] -> Maybe a
+head = listToMaybe
 
 --------------------------------------------------------------------------------
 
@@ -78,14 +82,10 @@ instance Show ( ObjectBody m ) where
 --------------------------------------------------------------------------------
 
 getObject :: Monad m => Object -> PTMonad m ( ObjectBody m )
-getObject obj = do
-	ret <- gets ( hd . filter ( ( == obj ) . objectId ) )
-	case ret of
-		Nothing -> get >>= error . show
-		Just x -> return x
+getObject obj =
+	gets ( fromMaybe err . head . filter ( ( == obj ) . objectId ) )
 	where
-	hd [ ] = Nothing
-	hd xs = Just $ head xs
+	err = error $ "no such object: " ++ show obj
 
 putObject :: Monad m => ObjectBody m -> PTMonad m ()
 putObject = modify . ( : )
@@ -93,7 +93,9 @@ putObject = modify . ( : )
 getNewId :: Monad m => PTMonad m Object
 getNewId = do
 	ids <- gets $ map ( fromObjId . objectId )
-	return $ ObjectId $ head $ [ 1 .. ] \\ ids
+	return $ ObjectId $ fromMaybe err $ head $ [ 1 .. ] \\ ids
+	where
+	err = error "too many objects"
 
 clone :: Monad m => Object -> PTMonad m Object
 clone obj = do
@@ -108,7 +110,9 @@ makeMember = return . Member
 member :: Monad m => Object -> Member -> PTMonad m Object
 member obj mn = do
 	ObjectBody { objectMembers = mems } <- getObject obj
-	return $ fromJust $ lookup mn mems
+	return $ fromMaybe err $ lookup mn mems
+	where
+	err = error $ "No such member: " ++ show mn ++ "\nobject: " ++ show obj
 
 setMember :: Monad m => Object -> Member -> Object -> PTMonad m ()
 setMember obj mn val = do
