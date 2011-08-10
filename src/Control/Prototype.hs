@@ -1,55 +1,54 @@
 {-# LANGUAGE PackageImports #-}
 
 module Control.Prototype (
-	PrototypeMonad,
+	PTMonad,
 	Object,
-	VarName,
+	Member,
 	Method,
 
-	runPrototype,
-	initPrototypeEnv,
+	runPT,
+	initPTEnv,
 	object,
 	clone,
-	makeVarName,
-	setVar,
-	getVar,
-	getMethod,
-	sendMsg,
+	makeMember,
+	member,
+	method,
+	setMember,
 	setMethod,
 
 	liftPT,
-	fromPrimitiveInt,
-	primitiveInt,
-	fromPrimitiveString,
-	primitiveString,
+	primInt,
+	primStr,
+	fromPrimInt,
+	fromPrimStr,
 
-	printVarName,
+	printMemberName,
 ) where
 
 import "monads-tf" Control.Monad.State
 import Data.List
 import Data.Maybe
 
-runPrototype :: Monad m =>
-	PrototypeMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
-runPrototype = runObject
+runPT :: Monad m => PTMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
+runPT = runObject
 
-initPrototypeEnv :: ObjectEnv m
-initPrototypeEnv = initObjectEnv
+initPTEnv :: ObjectEnv m
+initPTEnv = initObjectEnv
 
-type PrototypeMonad m = ObjectMonad m
+type PTMonad m = ObjectMonad m
 
 type Object = ObjectId
+type Member = VarName
 
 liftPT :: Monad m => m a -> ObjectMonad m a
 liftPT = lift
 
-makeVarName :: Monad m => String -> ObjectMonad m VarName
-makeVarName = mkVarName
+makeMember :: Monad m => String -> ObjectMonad m VarName
+makeMember = mkVarName
 
-getMethod :: Monad m =>
+method :: Monad m =>
 	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
-getMethod = sendMsg
+method = sendMsg
 
 setMethod :: Monad m => ObjectId -> String -> Method m -> ObjectMonad m VarName
 setMethod obj mn m = do
@@ -65,6 +64,18 @@ data ObjectBody m =
 	Method {
 		objectId :: ObjectId,
 		_method :: Method m }
+
+primInt :: Int -> ObjectId
+primInt = primitiveInt
+
+primStr :: String -> ObjectId
+primStr = primitiveString
+
+fromPrimInt :: ObjectId -> Int
+fromPrimInt = fromPrimitiveInt
+
+fromPrimStr :: ObjectId -> String
+fromPrimStr = fromPrimitiveString
 
 data ObjectId =
 	ObjectId { objectIdInt :: Int	} |
@@ -91,8 +102,10 @@ instance Show ( ObjectBody m ) where
 	show ( Object oid st )	= "Object " ++ show oid ++ " " ++ show st
 data VarName = VarName String deriving ( Eq, Show )
 
-printVarName :: VarName -> IO ()
-printVarName ( VarName vn ) = putStrLn vn
+printMemberName :: MonadIO m => VarName -> m ()
+printMemberName = printVarName
+printVarName :: MonadIO m => VarName -> m ()
+printVarName ( VarName vn ) = liftIO $ putStrLn vn
 
 type ObjectMonad m = StateT ( ObjectEnv m ) m
 
@@ -132,11 +145,16 @@ clone obj = do
 mkVarName :: Monad m => String -> ObjectMonad m VarName
 mkVarName = return . VarName
 
+setMember :: Monad m => ObjectId -> VarName -> ObjectId -> ObjectMonad m ()
+setMember = setVar
+
 setVar :: Monad m => ObjectId -> VarName -> ObjectId -> ObjectMonad m ()
 setVar obj vn val = do
 	st <- getObject obj >>= return . objectStatus
 	putObject $ Object obj $ ( vn, val ) : st
 
+member :: Monad m => ObjectId -> VarName -> ObjectMonad m ObjectId
+member = getVar
 getVar :: Monad m => ObjectId -> VarName -> ObjectMonad m ObjectId
 getVar obj vn = do
 	st <- getObject obj >>= return . objectStatus
