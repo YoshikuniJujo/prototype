@@ -25,99 +25,59 @@ module Control.Prototype (
 	printMemberName,
 ) where
 
-import "monads-tf" Control.Monad.State
-import Data.List
-import Data.Maybe
+import "monads-tf" Control.Monad.State (
+	StateT, runStateT, lift, MonadIO, liftIO, modify, get, gets )
+import Data.List ( (\\) )
+import Data.Maybe ( fromJust )
 
-runPT :: Monad m => PTMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
-runPT = runObject
+--------------------------------------------------------------------------------
 
-initPTEnv :: ObjectEnv m
-initPTEnv = initObjectEnv
+type PTMonad m = StateT ( PTEnv m ) m
 
-type PTMonad m = ObjectMonad m
+runPT :: Monad m => PTMonad m a -> PTEnv m -> m ( a, PTEnv m )
+runPT = runStateT
 
-type Object = ObjectId
-type Member = VarName
-
-liftPT :: Monad m => m a -> ObjectMonad m a
+liftPT :: Monad m => m a -> PTMonad m a
 liftPT = lift
 
-makeMember :: Monad m => String -> ObjectMonad m VarName
-makeMember = mkVarName
+type PTEnv m = [ ObjectBody m ]
 
-method :: Monad m =>
-	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
-method = sendMsg
+initPTEnv :: PTEnv m
+initPTEnv = [ ObjectBody object [ ] ]
 
-setMethod :: Monad m => ObjectId -> String -> Method m -> ObjectMonad m VarName
-setMethod obj mn m = do
-	vn <- mkVarName mn
-	mt <- mkMethod m
-	setVar obj vn mt
-	return vn
-
-data ObjectBody m =
-	Object {
-		objectId	:: ObjectId,
-		objectStatus	:: [ ( VarName, ObjectId ) ] } |
-	Method {
-		objectId :: ObjectId,
-		_method :: Method m }
-
-primInt :: Int -> ObjectId
-primInt = primitiveInt
-
-primStr :: String -> ObjectId
-primStr = primitiveString
-
-fromPrimInt :: ObjectId -> Int
-fromPrimInt = fromPrimitiveInt
-
-fromPrimStr :: ObjectId -> String
-fromPrimStr = fromPrimitiveString
-
-data ObjectId =
-	ObjectId { objectIdInt :: Int	} |
-	PrimitiveInt { fromPrimitiveInt :: Int } |
-	PrimitiveString { fromPrimitiveString :: String }
+data Object =
+	ObjectId { fromObjId :: Int } |
+	PrimitiveInt { fromPrimInt :: Int } |
+	PrimitiveString { fromPrimStr :: String }
 	deriving ( Eq, Show )
 
-primitiveInt :: Int -> ObjectId
-primitiveInt = PrimitiveInt
+primInt :: Int -> Object
+primInt = PrimitiveInt
 
-primitiveString :: String -> ObjectId
-primitiveString = PrimitiveString
+primStr :: String -> Object
+primStr = PrimitiveString
 
-type Method m = ObjectId -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
-
-object :: ObjectId
+object :: Object
 object = ObjectId 0
 
-initObject :: ObjectBody m
-initObject = Object object [ ]
+data ObjectBody m =
+	ObjectBody {
+		objectId	:: Object,
+		objectMembers	:: [ ( Member, Object ) ] } |
+	Method {
+		objectId	:: Object,
+		objectMethod	:: Method m }
+
+data Member = Member String deriving ( Eq, Show )
+type Method m = Object -> [ Object ] -> PTMonad m [ Object ]
 
 instance Show ( ObjectBody m ) where
-	show Method { }		= "method"
-	show ( Object oid st )	= "Object " ++ show oid ++ " " ++ show st
-data VarName = VarName String deriving ( Eq, Show )
+	show ( Method oid _ ) = "Method " ++ show oid
+	show ( ObjectBody oid st ) = "Object " ++ show oid ++ " " ++ show st
 
-printMemberName :: MonadIO m => VarName -> m ()
-printMemberName = printVarName
-printVarName :: MonadIO m => VarName -> m ()
-printVarName ( VarName vn ) = liftIO $ putStrLn vn
+--------------------------------------------------------------------------------
 
-type ObjectMonad m = StateT ( ObjectEnv m ) m
-
-type ObjectEnv m = [ ObjectBody m ]
-
-initObjectEnv :: ObjectEnv m
-initObjectEnv = [ initObject ]
-
-runObject :: Monad m => ObjectMonad m a -> ObjectEnv m -> m ( a, ObjectEnv m )
-runObject = runStateT
-
-getObject :: Monad m => ObjectId -> ObjectMonad m ( ObjectBody m )
+getObject :: Monad m => Object -> PTMonad m ( ObjectBody m )
 getObject obj = do
 	ret <- gets ( hd . filter ( ( == obj ) . objectId ) )
 	case ret of
@@ -127,49 +87,47 @@ getObject obj = do
 	hd [ ] = Nothing
 	hd xs = Just $ head xs
 
-putObject :: Monad m => ObjectBody m -> ObjectMonad m ()
+putObject :: Monad m => ObjectBody m -> PTMonad m ()
 putObject = modify . ( : )
 
-getNewId :: Monad m => ObjectMonad m ObjectId
+getNewId :: Monad m => PTMonad m Object
 getNewId = do
-	ids <- gets $ map ( objectIdInt . objectId )
+	ids <- gets $ map ( fromObjId . objectId )
 	return $ ObjectId $ head $ [ 1 .. ] \\ ids
 
-clone :: Monad m => ObjectId -> ObjectMonad m ObjectId
+clone :: Monad m => Object -> PTMonad m Object
 clone obj = do
-	st <- getObject obj >>= return . objectStatus
+	mems <- getObject obj >>= return . objectMembers
 	newId <- getNewId
-	putObject $ Object newId st
+	putObject $ ObjectBody newId mems
 	return newId
 
-mkVarName :: Monad m => String -> ObjectMonad m VarName
-mkVarName = return . VarName
+makeMember :: Monad m => String -> PTMonad m Member
+makeMember = return . Member
 
-setMember :: Monad m => ObjectId -> VarName -> ObjectId -> ObjectMonad m ()
-setMember = setVar
+member :: Monad m => Object -> Member -> PTMonad m Object
+member obj mn = do
+	ObjectBody { objectMembers = mems } <- getObject obj
+	return $ fromJust $ lookup mn mems
 
-setVar :: Monad m => ObjectId -> VarName -> ObjectId -> ObjectMonad m ()
-setVar obj vn val = do
-	st <- getObject obj >>= return . objectStatus
-	putObject $ Object obj $ ( vn, val ) : st
+setMember :: Monad m => Object -> Member -> Object -> PTMonad m ()
+setMember obj mn val = do
+	ObjectBody { objectMembers = mems } <- getObject obj
+	putObject $ ObjectBody obj $ ( mn, val ) : mems
 
-member :: Monad m => ObjectId -> VarName -> ObjectMonad m ObjectId
-member = getVar
-getVar :: Monad m => ObjectId -> VarName -> ObjectMonad m ObjectId
-getVar obj vn = do
-	st <- getObject obj >>= return . objectStatus
-	return $ fromJust $ lookup vn st
-
-mkMethod :: Monad m => Method m -> ObjectMonad m ObjectId
-mkMethod m = do
-	newId <- getNewId
-	putObject $ Method newId m
-	return newId
-
-sendMsg :: Monad m =>
-	ObjectId -> VarName -> [ ObjectId ] -> ObjectMonad m [ ObjectId ]
-sendMsg obj mn args = do
-	Object { objectStatus = vs } <- getObject obj
-	let	mt = fromJust $ lookup mn vs
-	Method _ m <- getObject mt
+method :: Monad m => Object -> Member -> [ Object ] -> PTMonad m [ Object ]
+method obj mn args = do
+	mid <- member obj mn
+	Method { objectMethod = m } <- getObject mid
 	m obj args
+
+setMethod :: Monad m => Object -> String -> Method m -> PTMonad m Member
+setMethod obj name m = do
+	newId <- getNewId
+	mn <- makeMember name
+	putObject $ Method newId m
+	setMember obj mn newId
+	return mn
+
+printMemberName :: MonadIO m => Member -> m ()
+printMemberName ( Member vn ) = liftIO $ putStrLn vn
