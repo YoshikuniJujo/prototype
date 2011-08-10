@@ -68,3 +68,9 @@ sendMsg をどうするか。
 Structure and Interpretation of Computer Programs を参考にするのも一案。
 getMethod としても良いが、もっと object-oriented 色を出したい。
 send だと他とかぶりすぎる気がする。msg がいい気もするがどうか。
+
+2011.08.10 Wed.
+
+makeMember で、一度作った Member は二度と作れないようにすれば、
+カプセル化が実現できる。
+そのことによって問題となることが無ければこの仕様は良いように思う。
