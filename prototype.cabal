@@ -14,6 +14,10 @@ category:	Development
 synopsis:	prototype-based programming on Haskell
 description:	prototype-based programming on Haskell
 		.
+		You can download source codes by git.
+		.
+		git clone git:\/\/github.com\/YoshikuniJujo\/prototype.git prototype
+		.
 		Example code
 		.
 		> module Main where
@@ -32,7 +36,7 @@ description:	prototype-based programming on Haskell
 		>		liftPT $ putStrLn $ fromPrimStr n ++ " sitting."
 		>	myDog <- clone dog
 		>	method myDog setName [ primStr "John" ]
-		>	method myDog sig [ ]
+		>	method myDog sit [ ]
 		>	return ()
 		.
 		Another sample
