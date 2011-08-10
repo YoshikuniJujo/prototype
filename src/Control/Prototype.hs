@@ -120,18 +120,16 @@ method obj mem args =
 
 setMember :: Monad m => Object -> Member -> Object -> PTMonad m ()
 setMember obj mn val = do
-	ObjectBody { objectMembers = mems } <- getObject obj
-	putObject ObjectBody {
-		objectId = obj,
-		objectMembers = ( mn, val ) : mems }
+	objBody@ObjectBody { objectMembers = mems } <- getObject obj
+	putObject objBody { objectMembers = ( mn, val ) : mems }
 
 setMethod :: Monad m => Object -> String -> Method m -> PTMonad m Member
-setMethod obj name m = do
+setMethod obj name met = do
 	newId <- getNewId
-	mn <- makeMember name
-	putObject $ Method newId m
-	setMember obj mn newId
-	return mn
+	putObject $ Method newId met
+	mem <- makeMember name
+	setMember obj mem newId
+	return mem
 
 printMemberName :: MonadIO m => Member -> m ()
-printMemberName ( Member vn ) = liftIO $ putStrLn vn
+printMemberName ( Member name ) = liftIO $ putStrLn name
