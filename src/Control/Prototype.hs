@@ -16,6 +16,8 @@ module Control.Prototype (
 	setMember,
 	setMethod,
 
+	package,
+
 	liftPT,
 	primInt,
 	primStr,
@@ -27,7 +29,7 @@ module Control.Prototype (
 
 import Prelude hiding ( head )
 import "monads-tf" Control.Monad.State (
-	StateT, runStateT, lift, MonadIO, liftIO, modify, gets )
+	StateT, runStateT, lift, MonadIO, liftIO, put, get, gets )
 import Data.List ( (\\) )
 import Data.Maybe ( fromMaybe, listToMaybe )
 
@@ -47,10 +49,16 @@ runPT = runStateT
 liftPT :: Monad m => m a -> PTMonad m a
 liftPT = lift
 
-type PTEnv m = [ ObjectBody m ]
+data PTEnv m = PTEnv {
+	packageName	:: String,
+	objectBodys	:: [ ObjectBody m ]
+ } deriving Show
 
 initPTEnv :: PTEnv m
-initPTEnv = [ ObjectBody object [ ] ]
+initPTEnv = PTEnv {
+	packageName	= "main",
+	objectBodys	= [ ObjectBody object [ ] ]
+ }
 
 data Object =
 	ObjectId { fromObjId :: Int } |
@@ -85,18 +93,20 @@ instance Show ( ObjectBody m ) where
 --------------------------------------------------------------------------------
 
 getNewId :: Monad m => PTMonad m Object
-getNewId = gets $
-	ObjectId . head err . ( [ 1 .. ] \\ ) .	map ( fromObjId . objectId )
+getNewId = gets $ ObjectId . head err . ( [ 1 .. ] \\ ) .
+	map ( fromObjId . objectId ) . objectBodys
 	where
 	err = error "too many objects"
 
 getObject :: Monad m => Object -> PTMonad m ( ObjectBody m )
-getObject obj =	gets $ head err . filter ( ( == obj ) . objectId )
+getObject obj =	gets $ head err . filter ( ( == obj ) . objectId ) . objectBodys
 	where
 	err = error $ "no such object: " ++ show obj
 
 putObject :: Monad m => ObjectBody m -> PTMonad m ()
-putObject = modify . ( : )
+putObject objBody = do
+	env@PTEnv { objectBodys = obs } <- get
+	put env { objectBodys = objBody : obs }
 
 clone :: Monad m => Object -> PTMonad m Object
 clone obj = do
@@ -106,7 +116,8 @@ clone obj = do
 	return newId
 
 makeMember :: Monad m => String -> PTMonad m Member
-makeMember = return . Member
+makeMember name =
+	mmap ( Member . ( ++ name ) . ( ++ "::" ) ) $ gets packageName
 
 member :: Monad m => Object -> Member -> PTMonad m Object
 member obj mem =
@@ -128,6 +139,15 @@ setMethod obj mem met = do
 	newId <- getNewId
 	putObject $ Method newId met
 	setMember obj mem newId
+
+package :: Monad m => String -> PTMonad m a -> PTMonad m a
+package pkg act = do
+	env0@PTEnv { packageName = oldPkg } <- get
+	put env0 { packageName = pkg }
+	ret <- act
+	env1 <- get
+	put env1 { packageName = oldPkg }
+	return ret
 
 printMemberName :: MonadIO m => Member -> m ()
 printMemberName ( Member name ) = liftIO $ putStrLn name

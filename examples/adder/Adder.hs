@@ -6,7 +6,7 @@ import Control.Prototype
 import Data.Function
 
 makeAdder :: Monad m => PTMonad m ( Object, Member, Member, Member )
-makeAdder = do
+makeAdder = package "adder" $ do
 	i <- clone object
 	setx <- makeMember "setx"
 	getx <- makeMember "getx"

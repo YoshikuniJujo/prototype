@@ -20,7 +20,7 @@ import "monads-tf" Control.Monad.Identity
 
 makeAddSub :: Monad m =>
 	PTMonad m ( Object, Member, Member, Member, Member )
-makeAddSub = do
+makeAddSub = package "addSub" $ do
 	( adder, setx, addx, getx ) <- makeAdder
 	suber <- clone adder
 	subx <- makeMember "subx"

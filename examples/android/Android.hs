@@ -52,7 +52,7 @@ runAndroid act = withWindow $ \dpy win dWin -> do
 				_ -> return True
 
 importAndroid :: PTMonad X11IO ( Object, Member, Member )
-importAndroid = do
+importAndroid = package "android" $ do
 	textWidget	<- clone object
 	setText		<- makeMember "setText"
 	setContentView	<- makeMember "setContentView"
@@ -61,13 +61,14 @@ importAndroid = do
 	return ( textWidget, setText, setContentView )
 
 setTextFun :: Method X11IO
-setTextFun obj [ str ] = do
+setTextFun obj [ str ] = package "android" $ do
 	text <- makeMember "text"
+	printMemberName text
 	setMember obj text str
 	return [ ]
 
 setContentViewFun :: Method X11IO
-setContentViewFun obj [ ] = do
+setContentViewFun obj [ ] = package "android" $ do
 	X11Env dpy win dWin _ <- lift get
 	text <- makeMember "text"
 	txt <- member obj text
