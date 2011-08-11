@@ -2,6 +2,7 @@
 
 module Control.Prototype (
 	PTMonad,
+	PTEnv,
 	Object,
 	Member,
 	Method,
