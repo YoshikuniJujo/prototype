@@ -8,6 +8,8 @@ module Control.Prototype (
 	Method,
 
 	runProt,
+	evalProt,
+	execProt,
 	initProtEnv,
 	package,
 	object,
@@ -29,7 +31,8 @@ module Control.Prototype (
 
 import Prelude hiding ( head )
 import "monads-tf" Control.Monad.State (
-	StateT, runStateT, lift, MonadIO, liftIO, put, get, gets )
+	StateT, runStateT, evalStateT, execStateT,
+	lift, MonadIO, liftIO, put, get, gets )
 import Data.List ( (\\) )
 import Data.Maybe ( fromMaybe, listToMaybe )
 
@@ -45,6 +48,12 @@ type Prot m = StateT ( ProtEnv m ) m
 
 runProt :: Monad m => Prot m a -> ProtEnv m -> m ( a, ProtEnv m )
 runProt = runStateT
+
+evalProt :: Monad m => Prot m a -> ProtEnv m -> m a
+evalProt = evalStateT
+
+execProt :: Monad m => Prot m a -> ProtEnv m -> m ( ProtEnv m )
+execProt = execStateT
 
 liftProt :: Monad m => m a -> Prot m a
 liftProt = lift
