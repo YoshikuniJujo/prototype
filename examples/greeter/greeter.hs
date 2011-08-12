@@ -4,9 +4,9 @@ import Control.Prototype
 import Greeter
 
 main :: IO ()
-main = fmap fst $ flip runPT initPTEnv $ do
+main = fmap fst $ flip runProt initProtEnv $ do
 	( greeter, initialize, say_hi, say_bye ) <- importGreeter
-	printMemberName say_hi
+	printMember say_hi
 	world	<- clone greeter
 	me	<- clone greeter
 	method world initialize [ ]

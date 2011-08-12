@@ -2,7 +2,7 @@ module Main where
 
 import Control.Prototype
 
-main = flip runPT initPTEnv $ do
+main = flip runProt initProtEnv $ do
 	( dog, setName, sit ) <- package "dog" $ do
 		honyuurui <- clone object
 		dog <- clone honyuurui
@@ -11,7 +11,7 @@ main = flip runPT initPTEnv $ do
 		name <- makeMember "name"
 		setMethod dog sit $ \obj _ -> do
 			n <- member obj name
-			liftPT $ putStrLn $ fromPrimStr n ++ " sitting."
+			liftProt $ putStrLn $ fromPrimStr n ++ " sitting."
 			return [ ]
 		setMethod dog setName $ \obj [ n ] -> do
 			setMember obj name n

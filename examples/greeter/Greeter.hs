@@ -7,7 +7,7 @@ module Greeter (
 import Control.Prototype
 import "monads-tf" Control.Monad.Trans
 
-importGreeter :: MonadIO m => PTMonad m ( Object, Member, Member, Member )
+importGreeter :: MonadIO m => Prot m ( Object, Member, Member, Member )
 importGreeter = package "greeter" $ do
 	greeter <- clone object
 	name		<- makeMember "name"

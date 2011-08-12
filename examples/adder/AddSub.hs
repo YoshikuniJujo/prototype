@@ -3,14 +3,14 @@
 module AddSub (
 	makeAddSub,
 
-	runPT,
-	initPTEnv,
+	runProt,
+	initProtEnv,
 	method,
-	liftPT,
+	liftProt,
 	runIdentity,
 	primInt,
 	fromPrimInt,
-	printMemberName
+	printMember
 ) where
 
 import Adder
@@ -19,7 +19,7 @@ import Data.Function
 import "monads-tf" Control.Monad.Identity
 
 makeAddSub :: Monad m =>
-	PTMonad m ( Object, Member, Member, Member, Member )
+	Prot m ( Object, Member, Member, Member, Member )
 makeAddSub = package "addSub" $ do
 	( adder, setx, addx, getx ) <- makeAdder
 	suber <- clone adder

@@ -23,18 +23,18 @@ data X11Env = X11Env {
 	display		:: Display,
 	window		:: Window,
 	delWin		:: Atom,
-	exposeAction	:: PTMonad X11IO ()
+	exposeAction	:: Prot X11IO ()
  }
 
-runAndroid :: PTMonad X11IO a -> IO ()
+runAndroid :: Prot X11IO a -> IO ()
 runAndroid act = withWindow $ \dpy win dWin -> do
 	let initX11Env = X11Env dpy win dWin $ return ()
-	flip evalStateT initX11Env $ fmap fst $ flip runPT initPTEnv $ do
+	flip evalStateT initX11Env $ fmap fst $ flip runProt initProtEnv $ do
 		act
 		exAct <- lift $ gets exposeAction
 		x11Env <- lift get
 		doWhile_ $ liftIO $ allocaXEvent $ \e -> flip evalStateT x11Env $
-			fmap fst $ flip runPT initPTEnv $ do
+			fmap fst $ flip runProt initProtEnv $ do
 			liftIO $ nextEvent dpy e
 			ev <- liftIO $ getEvent e
 			case ev of
@@ -51,7 +51,7 @@ runAndroid act = withWindow $ \dpy win dWin -> do
 					return True
 				_ -> return True
 
-importAndroid :: PTMonad X11IO ( Object, Member, Member )
+importAndroid :: Prot X11IO ( Object, Member, Member )
 importAndroid = package "android" $ do
 	textWidget	<- clone object
 	setText		<- makeMember "setText"
@@ -63,7 +63,7 @@ importAndroid = package "android" $ do
 setTextFun :: Method X11IO
 setTextFun obj [ str ] = package "android" $ do
 	text <- makeMember "text"
-	printMemberName text
+	printMember text
 	setMember obj text str
 	return [ ]
 
