@@ -17,7 +17,7 @@ test1 = let
 	printMember var
 
 test2 :: IO ()
-test2 = fmap fst $ flip runProt initProtEnv $ do
+test2 = flip evalProt initProtEnv $ do
 	( adder, setx, getx, addx, subx ) <- makeAddSub
 	liftProt $ printMember setx
 	method adder setx [ primInt 3 ]
