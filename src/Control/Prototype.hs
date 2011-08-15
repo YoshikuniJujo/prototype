@@ -17,12 +17,15 @@ module Control.Prototype (
 	makeMember,
 	setMember,
 	member,
+	makeMethod,
 	setMethod,
 	method,
 
 	liftProt,
+	primBool,
 	primInt,
 	primStr,
+	fromPrimBool,
 	fromPrimInt,
 	fromPrimStr,
 
@@ -71,9 +74,13 @@ initProtEnv = ProtEnv {
 
 data Object =
 	ObjectId { fromObjId :: Int } |
+	PrimitiveBool { fromPrimBool :: Bool } |
 	PrimitiveInt { fromPrimInt :: Int } |
 	PrimitiveString { fromPrimStr :: String }
 	deriving ( Eq, Show )
+
+primBool :: Bool -> Object
+primBool = PrimitiveBool
 
 primInt :: Int -> Object
 primInt = PrimitiveInt
@@ -142,6 +149,12 @@ setMember :: Monad m => Object -> Member -> Object -> Prot m ()
 setMember obj mn val = do
 	objBody@ObjectBody { objectMembers = mems } <- getObject obj
 	putObject objBody { objectMembers = ( mn, val ) : mems }
+
+makeMethod :: Monad m => Method m -> Prot m Object
+makeMethod met = do
+	newId <- getNewId
+	putObject $ Method newId met
+	return newId
 
 setMethod :: Monad m => Object -> Member -> Method m -> Prot m ()
 setMethod obj mem met = do
