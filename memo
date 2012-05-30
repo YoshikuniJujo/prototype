@@ -82,3 +82,7 @@ import の依存関係上複数回 import される package が存在し得る�
 そのため、カプセル化は package 名の明示によって行うこととした。
 
 また、ある程度いじったので再度 refactoring を行うこととする。
+
+2012.05.30 Wed.
+
+最近、github に up していないので test のために up してみる。
